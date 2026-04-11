@@ -463,6 +463,19 @@ curl -sf -X POST "http://127.0.0.1:$BACKEND_PORT/api/v1/auth/setup" \
 kill $UVICORN_PID 2>/dev/null; wait $UVICORN_PID 2>/dev/null || true
 deactivate
 
+# ── Create Management Commands ─────────────────────────────
+info "Creating global management commands..."
+cat > /usr/local/bin/hihub <<EOF
+#!/usr/bin/env bash
+sudo $INSTALL_DIR/backend/venv/bin/python3 $INSTALL_DIR/backend/scripts/manager.py "\$@"
+EOF
+
+chmod +x /usr/local/bin/hihub
+ln -sf /usr/local/bin/hihub /usr/local/bin/hivoid-hub
+ln -sf /usr/local/bin/hihub /usr/local/bin/HiVoid-hub
+
+ok "Management commands created: ${BOLD}hihub, hivoid-hub, HiVoid-hub${NC}"
+
 # ══════════════════════════════════════════════════════════
 # STEP 6 — Systemd
 # ══════════════════════════════════════════════════════════
@@ -614,6 +627,10 @@ box_line ""
 box_sep
 box_line ""
 box_line "  Edge Token      :  $HUB_TOKEN" "${YELLOW}"
+box_line ""
+box_sep
+box_line ""
+box_line "  Manage System   :  Type 'hihub' from anywhere" "${BOLD}${WHITE}"
 box_line ""
 box_bottom
 

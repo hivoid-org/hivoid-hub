@@ -108,7 +108,7 @@ class HiVoidManager:
             Text(""), # spacer
             content,
             Text(""), # spacer
-            Align.center(Text("HiVoid Hub v1.0.3-Stable | Management Terminal", style="dim italic"))
+            Align.center(Text("HiVoid Hub v1.0.4-Stable | Management Terminal", style="dim italic"))
         )
 
     def run_cmd(self, i):
@@ -308,7 +308,12 @@ class HiVoidManager:
                         subprocess.run(["sudo", "-u", "postgres", "psql", "-c", "DROP DATABASE hivoid_hub;"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
                         subprocess.run(["sudo", "-u", "postgres", "psql", "-c", "DROP USER hivoid;"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
                         
-                    # 4. Install Dir
+                    # 4. Global Commands
+                    console.print("[cyan]Removing global commands...[/]")
+                    for cmd in ["/usr/local/bin/hihub", "/usr/local/bin/hivoid-hub", "/usr/local/bin/HiVoid-hub"]:
+                        if os.path.exists(cmd): os.remove(cmd)
+
+                    # 5. Install Dir
                     console.print("[cyan]Removing installation directory...[/]")
                     import shutil
                     shutil.rmtree(INSTALL_DIR, ignore_errors=True)

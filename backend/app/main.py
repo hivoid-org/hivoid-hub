@@ -81,6 +81,6 @@ async def startup_event():
 def read_root():
     return {
         "status": "online",
-        "message": "Welcome to HiVoid Subscription Hub API v1.0.3",
+        "message": "Welcome to HiVoid Subscription Hub API v1.0.4",
         "websocket_endpoint": f"wss://<your-domain>{settings.API_V1_STR}/nodes/ws"
     }
