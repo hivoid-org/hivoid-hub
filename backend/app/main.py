@@ -30,7 +30,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     description="Centralized Subscription & Node Management Hub for HiVoid.",
-    version="2.0.0",
+    version="1.0.2",
 )
 
 # Request Logging Middleware
@@ -81,6 +81,6 @@ async def startup_event():
 def read_root():
     return {
         "status": "online",
-        "message": "Welcome to HiVoid Subscription Hub API v2.0",
+        "message": "Welcome to HiVoid Subscription Hub API v1.0.2",
         "websocket_endpoint": f"wss://<your-domain>{settings.API_V1_STR}/nodes/ws"
     }

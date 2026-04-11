@@ -40,8 +40,8 @@ from sqlalchemy.orm.attributes import flag_modified
 from app.core.redis_client import redis_client
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
-BIGINT_MAX = 9223372036854775807
+
+# (Redundant logger and BIGINT_MAX removed)
 
 class Token(BaseModel):
     access_token: str | None = None
@@ -234,6 +234,7 @@ async def login(
                 # Remove used recovery code
                 new_codes = [c for c in admin.totp_recovery_codes if c != payload.otp_code]
                 admin.totp_recovery_codes = new_codes
+                flag_modified(admin, "totp_recovery_codes")
                 db.commit()
 
         if not is_otp_valid and not is_recovery_valid:
@@ -507,6 +508,7 @@ async def enable_2fa(
             code = ''.join(secrets.choice(string.digits) for _ in range(10))
             codes.append(code)
         current_admin.totp_recovery_codes = codes
+        flag_modified(current_admin, "totp_recovery_codes")
         
         db.commit()
         await log_security_event(db, current_admin.id, "2FA_ENABLED", "Two-factor authentication enabled", "n/a", "n/a")
@@ -515,8 +517,15 @@ async def enable_2fa(
         db.rollback()
         logger.error(f"Error in enable_2fa: {str(e)}")
         logger.error(traceback.format_exc())
-        if isinstance(e, HTTPException): raise e
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        
+        if isinstance(e, HTTPException):
+            raise e
+            
+        error_msg = str(e)
+        if "base32" in error_msg.lower() or "binascii" in error_msg.lower():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid 2FA secret format. Please setup again.")
+            
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal Server Error: {error_msg}")
 
 
 @router.delete("/2fa/disable", summary="Disable 2FA")
@@ -708,7 +717,13 @@ async def webauthn_register_verify(
     
     # Automatically determine host and origin
     host = request.headers.get("host", "localhost").split(":")[0]
-    origin = f"https://{host}" if request.headers.get("x-forwarded-proto") == "https" else f"http://{host}"
+    # Robust protocol detection: check X-Forwarded-Proto, or trust Origin if it matches host
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    if proto != "https":
+        origin_hdr = request.headers.get("origin")
+        if origin_hdr and origin_hdr.startswith("https://") and host in origin_hdr:
+            proto = "https"
+    origin = f"{proto}://{host}"
     try:
         challenge = base64.b64decode(challenge_b64)
         verification = verify_registration_response(
@@ -808,7 +823,13 @@ async def webauthn_login_verify(
 
     # Automatically determine host and origin
     host = request.headers.get("host", "localhost").split(":")[0]
-    origin = f"https://{host}" if request.headers.get("x-forwarded-proto") == "https" else f"http://{host}"
+    # Robust protocol detection: check X-Forwarded-Proto, or trust Origin if it matches host
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    if proto != "https":
+        origin_hdr = request.headers.get("origin")
+        if origin_hdr and origin_hdr.startswith("https://") and host in origin_hdr:
+            proto = "https"
+    origin = f"{proto}://{host}"
 
     try:
         client_ip = request.client.host if request.client else "unknown"
@@ -917,5 +938,6 @@ async def delete_webauthn_credential(
         new_creds = [c for c in current_admin.webauthn_credentials if c["credential_id"] != decoded_id]
 
     current_admin.webauthn_credentials = new_creds
+    flag_modified(current_admin, "webauthn_credentials")
     db.commit()
     return {"status": "deleted"}

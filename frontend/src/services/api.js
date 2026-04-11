@@ -71,7 +71,7 @@ const API = {
   updatePassword: (current_password, new_password) =>
     apiClient.put('/auth/password', { current_password, new_password }),
   setup2FA: () => apiClient.get('/auth/2fa/setup'),
-  enable2FA: (secret, code) => apiClient.post('/auth/2fa/enable', { secret, code }),
+  enable2FA: (code, secret) => apiClient.post('/auth/2fa/enable', { code, secret }),
   disable2FA: () => apiClient.delete('/auth/2fa/disable'),
   getHubToken: () => apiClient.get('/auth/hub-token'),
   getHubConfig: () => apiClient.get('/auth/hub-config'),
