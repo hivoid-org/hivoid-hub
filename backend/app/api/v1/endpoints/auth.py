@@ -495,11 +495,17 @@ async def enable_2fa(
     import pyotp
     import traceback
     try:
-        totp = pyotp.TOTP(payload.secret)
-        if not totp.verify(payload.code, valid_window=1):
+        clean_secret = payload.secret.replace(" ", "").replace("-", "").upper()
+        pad_len = (8 - len(clean_secret) % 8) % 8
+        clean_secret += "=" * pad_len
+        
+        clean_code = payload.code.replace(" ", "").strip()
+        
+        totp = pyotp.TOTP(clean_secret)
+        if not totp.verify(clean_code, valid_window=1):
             raise HTTPException(status_code=400, detail="Invalid verification code")
         
-        current_admin.totp_secret = payload.secret
+        current_admin.totp_secret = clean_secret
         current_admin.totp_enabled = True
         
         # Generate Recovery Codes
