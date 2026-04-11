@@ -10,7 +10,7 @@ export default function Login({ onLoginSuccess }) {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const [tgPending, setTgPending] = useState(false);
   const [txId, setTxId] = useState('');
   const [loginMode, setLoginMode] = useState('normal'); // 'normal' or 'telegram'
@@ -25,7 +25,7 @@ export default function Login({ onLoginSuccess }) {
       try {
         const info = await API.getPublicInfo();
         setPublicInfo(info);
-      } catch (e) {}
+      } catch (e) { }
     };
     fetchInfo();
   }, [theme]);
@@ -34,26 +34,26 @@ export default function Login({ onLoginSuccess }) {
   useEffect(() => {
     let pollTimer;
     if (tgPending && txId) {
-        pollTimer = setInterval(async () => {
-            try {
-                const data = await API.checkTelegramApproval(txId);
-                if (data.status === 'success') {
-                    clearInterval(pollTimer);
-                    setTgPending(false);
-                    localStorage.setItem('hivoid_token', data.access_token);
-                    localStorage.setItem('hivoid_user', data.username);
-                    onLoginSuccess(data.username);
-                } else if (data.status !== 'PENDING') {
-                    // This case shouldn't happen based on API design but for safety:
-                    throw new Error('Verification failed');
-                }
-            } catch (err) {
-                clearInterval(pollTimer);
-                setTgPending(false);
-                setError(err.response?.data?.detail === 'LOGIN_DENIED' ? 'Login denied from Telegram.' : 'Telegram request expired or failed.');
-                setLoading(false);
-            }
-        }, 2000);
+      pollTimer = setInterval(async () => {
+        try {
+          const data = await API.checkTelegramApproval(txId);
+          if (data.status === 'success') {
+            clearInterval(pollTimer);
+            setTgPending(false);
+            localStorage.setItem('hivoid_token', data.access_token);
+            localStorage.setItem('hivoid_user', data.username);
+            onLoginSuccess(data.username);
+          } else if (data.status !== 'PENDING') {
+            // This case shouldn't happen based on API design but for safety:
+            throw new Error('Verification failed');
+          }
+        } catch (err) {
+          clearInterval(pollTimer);
+          setTgPending(false);
+          setError(err.response?.data?.detail === 'LOGIN_DENIED' ? 'Login denied from Telegram.' : 'Telegram request expired or failed.');
+          setLoading(false);
+        }
+      }, 2000);
     }
     return () => pollTimer && clearInterval(pollTimer);
   }, [tgPending, txId]);
@@ -72,16 +72,16 @@ export default function Login({ onLoginSuccess }) {
     setError('');
     setLoading(true);
     try {
-      const data = loginMode === 'telegram' 
+      const data = loginMode === 'telegram'
         ? await API.loginTelegramOnly(username)
         : await API.login(username, password, otpCode);
 
       if (data.status === 'TELEGRAM_APPROVAL_PENDING') {
-          setTxId(data.tx_id);
-          setTgPending(true);
-          setLoading(true);
-          setError('');
-          return;
+        setTxId(data.tx_id);
+        setTgPending(true);
+        setLoading(true);
+        setError('');
+        return;
       }
       localStorage.setItem('hivoid_token', data.access_token);
       localStorage.setItem('hivoid_user', data.username);
@@ -168,7 +168,7 @@ export default function Login({ onLoginSuccess }) {
     <div className="login-page">
       <div className="login-grid-bg" />
       <div className="login-wrapper animate-fade-slide">
-        
+
         {/* Brand */}
         <div className="login-brand">
           <img src={logoSrc} alt="HiVoid" className="login-brand-logo" />
@@ -179,7 +179,7 @@ export default function Login({ onLoginSuccess }) {
         {/* Card */}
         <div className="login-card">
           <form onSubmit={handleSubmit} className="login-form">
-            
+
             {error && (
               <div className="login-error">
                 <AlertCircle size={14} />
@@ -242,28 +242,28 @@ export default function Login({ onLoginSuccess }) {
                 )}
               </>
             ) : (
-                <div className="login-field animate-fade-slide">
-                    <label>Telegram Admin Username</label>
-                    <input
-                        type="text"
-                        className="input-field"
-                        placeholder="Enter username..."
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        disabled={tgPending}
-                        autoFocus
-                    />
-                </div>
+              <div className="login-field animate-fade-slide">
+                <label>Telegram Admin Username</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Enter username..."
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  disabled={tgPending}
+                  autoFocus
+                />
+              </div>
             )}
 
             {tgPending && (
               <div className="login-field animate-fade-slide tg-pending-box">
                 <div className="tg-pending-content">
-                    <Send className="tg-fly-icon" size={24} color="#0088cc" />
-                    <div className="tg-pending-text">
-                        <strong>Waiting for Approval</strong>
-                        <p>A notification has been sent to your Telegram. Please approve to continue.</p>
-                    </div>
+                  <Send className="tg-fly-icon" size={24} color="#0088cc" />
+                  <div className="tg-pending-text">
+                    <strong>Waiting for Approval</strong>
+                    <p>A notification has been sent to your Telegram. Please approve to continue.</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -290,45 +290,45 @@ export default function Login({ onLoginSuccess }) {
             </button>
 
             <div className="login-divider">
-               <span>OTHER OPTIONS</span>
+              <span>OTHER OPTIONS</span>
             </div>
 
             <div className="login-extras">
-                {loginMode === 'normal' && publicInfo.telegram_login_auth && (
-                    <button
-                        type="button"
-                        className="btn btn-secondary w-full"
-                        onClick={() => { setLoginMode('telegram'); setError(''); setShowOtp(false); }}
-                        disabled={loading}
-                    >
-                        <Send size={16} color="#0088cc" /> Sign in via Telegram
-                    </button>
-                )}
-                
-                {loginMode === 'telegram' && (
-                    <button
-                        type="button"
-                        className="btn btn-secondary w-full"
-                        onClick={() => { setLoginMode('normal'); setError(''); }}
-                        disabled={loading}
-                    >
-                        <Lock size={16} /> Standard Username & Password
-                    </button>
-                )}
-
+              {loginMode === 'normal' && publicInfo.telegram_login_auth && (
                 <button
-                    type="button"
-                    className="btn btn-secondary w-full"
-                    onClick={handlePasskeyLogin}
-                    disabled={loading || showOtp || tgPending}
+                  type="button"
+                  className="btn btn-secondary w-full"
+                  onClick={() => { setLoginMode('telegram'); setError(''); setShowOtp(false); }}
+                  disabled={loading}
                 >
-                    <Smartphone size={16} /> Sign in with Passkey
+                  <Send size={16} color="#0088cc" /> Sign in via Telegram
                 </button>
+              )}
+
+              {loginMode === 'telegram' && (
+                <button
+                  type="button"
+                  className="btn btn-secondary w-full"
+                  onClick={() => { setLoginMode('normal'); setError(''); }}
+                  disabled={loading}
+                >
+                  <Lock size={16} /> Standard Username & Password
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="btn btn-secondary w-full"
+                onClick={handlePasskeyLogin}
+                disabled={loading || showOtp || tgPending}
+              >
+                <Smartphone size={16} /> Sign in with Passkey
+              </button>
             </div>
           </form>
         </div>
 
-        <p className="login-footer">HiVoid Hub v1.0</p>
+        <p className="login-footer">HiVoid Hub V1.0.1</p>
       </div>
     </div>
   );

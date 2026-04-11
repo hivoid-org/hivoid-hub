@@ -4,6 +4,15 @@
   <img src="logo/hi-logo-white-transparent.png" alt="Hi Void Logo" width="200" />
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/version-V1.0.1.1--stable-blue.svg" />
+  <img src="https://img.shields.io/badge/license-MPL--2.0-green.svg" />
+  <img src="https://img.shields.io/badge/platform-linux-blue.svg" />
+  <img src="https://img.shields.io/badge/python-3.10+-00ADD8?logo=python" />
+  <img src="https://img.shields.io/badge/react-00ADD8?logo=react" />
+  <img src="https://img.shields.io/badge/status-stable-blue.svg" />
+</p>
+
 Professional Node Management & Subscription Billing Interface.
 
 ## 🚀 One-Line Installation

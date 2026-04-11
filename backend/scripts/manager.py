@@ -108,7 +108,7 @@ class HiVoidManager:
             Text(""), # spacer
             content,
             Text(""), # spacer
-            Align.center(Text("HiVoid Hub v1.0.0-Stable | Management Terminal", style="dim italic"))
+            Align.center(Text("HiVoid Hub V1.0.1.1-Stable | Management Terminal", style="dim italic"))
         )
 
     def run_cmd(self, i):
@@ -287,12 +287,34 @@ class HiVoidManager:
                         subprocess.run(["systemctl", "start", "nginx"])
             elif i == 8: # Uninstall
                 if Prompt.ask("Type DELETE to confirm") == "DELETE":
+                    # 1. Systemd Service
+                    console.print("[cyan]Stopping and removing hivoid-hub.service...[/]")
                     subprocess.run(["systemctl", "stop", self.service], stderr=subprocess.DEVNULL)
                     subprocess.run(["systemctl", "disable", self.service], stderr=subprocess.DEVNULL)
                     sp = f"/etc/systemd/system/{self.service}.service"
                     if os.path.exists(sp): os.remove(sp)
                     subprocess.run(["systemctl", "daemon-reload"])
-                    console.print("[bold red]System uninstalled successfully.[/]")
+                    
+                    # 2. Nginx
+                    console.print("[cyan]Removing Nginx configuration...[/]")
+                    for ngx_file in ["/etc/nginx/sites-enabled/hivoid-hub", "/etc/nginx/sites-available/hivoid-hub"]:
+                        if os.path.exists(ngx_file): os.remove(ngx_file)
+                    if subprocess.run(["nginx", "-t"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL).returncode == 0:
+                        subprocess.run(["systemctl", "reload", "nginx"])
+                        
+                    # 3. Database
+                    if Confirm.ask("Do you want to drop the PostgreSQL database and user 'hivoid'?"):
+                        console.print("[cyan]Dropping database 'hivoid_hub' and user 'hivoid'...[/]")
+                        subprocess.run(["sudo", "-u", "postgres", "psql", "-c", "DROP DATABASE hivoid_hub;"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+                        subprocess.run(["sudo", "-u", "postgres", "psql", "-c", "DROP USER hivoid;"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+                        
+                    # 4. Install Dir
+                    console.print("[cyan]Removing installation directory...[/]")
+                    import shutil
+                    shutil.rmtree(INSTALL_DIR, ignore_errors=True)
+                    
+                    console.print("\n[bold green]System uninstalled successfully.[/]")
+                    console.print("[dim]Dependencies like PostgreSQL, Redis, and Nginx remain installed.[/]")
                     sys.exit(0)
             elif i == 9: sys.exit(0)
         except Exception as e: console.print(f"[bold red]System Error: {e}[/]")

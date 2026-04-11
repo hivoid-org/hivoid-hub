@@ -58,8 +58,8 @@ export default function Sidebar({ user, onLogout }) {
           <img src={logoSrc} alt="HiVoid" className="brand-logo-sm" />
           <span className="brand-text">HiVoid</span>
         </div>
-        <button 
-          className="mobile-menu-btn" 
+        <button
+          className="mobile-menu-btn"
           onClick={() => setIsOpen(true)}
           aria-label="Open menu"
         >
@@ -69,16 +69,16 @@ export default function Sidebar({ user, onLogout }) {
 
       {/* Overlay */}
       {isOpen && (
-        <div 
-          className="sidebar-overlay" 
-          onClick={() => setIsOpen(false)} 
+        <div
+          className="sidebar-overlay"
+          onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <nav className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
         {/* Close button (mobile) */}
-        <button 
+        <button
           className="sidebar-close-btn"
           onClick={() => setIsOpen(false)}
           aria-label="Close menu"
@@ -91,7 +91,7 @@ export default function Sidebar({ user, onLogout }) {
           <img src={logoSrc} alt="HiVoid" className="brand-logo-lg" />
           <div className="brand-info">
             <h2 className="brand-title">HiVoid</h2>
-            <span className="brand-subtitle">Hub v1.0</span>
+            <span className="brand-subtitle">Hub V1.0.1</span>
           </div>
         </div>
 
