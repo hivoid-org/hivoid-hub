@@ -1,4 +1,9 @@
 # 🌌 HiVoid Hub
+
+<p align="center">
+  <img src="logo/hi-logo-white-transparent.png" alt="Hi Void Logo" width="200" />
+</p>
+
 Professional Node Management & Subscription Billing Interface.
 
 ## 🚀 One-Line Installation
@@ -15,12 +20,12 @@ hihub
 ```
 *Alternatively, use `hivoid-hub` or `HiVoid-hub`.*
 
-### **Manager Features:**
-- ↺ **Restart/Stop/Start** HiVoid & Nginx services.
-- 🔑 **Reset Admin** credentials and security tokens.
-- 🌐 **Update Timezone** with searchable selection.
-- ⬆ **Smart Update** directly from GitHub API.
-- 🔥 **Full Uninstall** for complete system cleanup.
+## 🔒 Security First
+1. Login to the dashboard and navigate to **Settings -> 2FA**.
+2. Enable 2FA.
+3. You can also enable login via Telegram Bot.
 
----
-© 2024 [HiVoid Network](https://github.com/hivoid-org) | v1.0.0-Stable
+## License
+
+This project is licensed under the **Mozilla Public License 2.0 (MPL-2.0)**.  
+See the `LICENSE` file for details.
