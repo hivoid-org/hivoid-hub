@@ -3,6 +3,7 @@ frontend/dist/
 dist/
 *.zip
 *.tar.gz
+.github
 
 venv/
 .venv/
@@ -22,5 +23,4 @@ node_modules/
 
 github.py
 check.py
-uninstall.sh
 uninstall.sh
