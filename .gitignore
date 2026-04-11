@@ -3,7 +3,7 @@ frontend/dist/
 dist/
 *.zip
 *.tar.gz
-.github
+.github/
 
 venv/
 .venv/
