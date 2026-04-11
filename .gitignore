@@ -1,5 +1,6 @@
 backend/static/
 frontend/dist/
+dist/
 *.zip
 *.tar.gz
 
@@ -21,3 +22,5 @@ node_modules/
 
 github.py
 check.py
+uninstall.sh
+uninstall.sh
