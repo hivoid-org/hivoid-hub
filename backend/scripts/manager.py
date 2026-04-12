@@ -108,7 +108,7 @@ class HiVoidManager:
             Text(""), # spacer
             content,
             Text(""), # spacer
-            Align.center(Text("HiVoid Hub v1.0.4-Stable | Management Terminal", style="dim italic"))
+            Align.center(Text("HiVoid Hub v1.0.5-Stable | Management Terminal", style="dim italic"))
         )
 
     def run_cmd(self, i):

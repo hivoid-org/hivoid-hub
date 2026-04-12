@@ -13,7 +13,7 @@ export default function Login({ onLoginSuccess }) {
 
   const [tgPending, setTgPending] = useState(false);
   const [txId, setTxId] = useState('');
-  const [loginMode, setLoginMode] = useState('normal'); // 'normal' or 'telegram'
+  const [loginMode, setLoginMode] = useState('normal');
   const [publicInfo, setPublicInfo] = useState({ login_path: 'login', telegram_login_auth: false });
 
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -60,7 +60,7 @@ export default function Login({ onLoginSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username || !password) {
+    if (!username || (loginMode === 'normal' && !password)) {
       setError('Please fill in all fields.');
       return;
     }
@@ -328,7 +328,7 @@ export default function Login({ onLoginSuccess }) {
           </form>
         </div>
 
-        <p className="login-footer">HiVoid Hub v1.0.4</p>
+        <p className="login-footer">HiVoid Hub v1.0.5</p>
       </div>
     </div>
   );
