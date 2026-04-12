@@ -145,16 +145,15 @@ else
   info "No local zip found. Fetching latest release from GitHub..."
   ZIP_FILE="/tmp/hivoid-hub-release.zip"
   rm -f "$ZIP_FILE"
-  
+
   spin_start "Fetching release information..."
-  # Gets the first 'browser_download_url' from the latest GitHub release
   DOWNLOAD_URL=$(curl -s "https://api.github.com/repos/hivoid-org/hivoid-hub/releases/latest" | grep -m 1 '"browser_download_url":' | cut -d '"' -f 4)
   spin_stop
-  
+
   if [[ -z "$DOWNLOAD_URL" ]]; then
     err "No release asset found on GitHub. Provide the zip file manually."
   fi
-  
+
   spin_start "Downloading release package..."
   if ! curl -sL "$DOWNLOAD_URL" -o "$ZIP_FILE"; then
     spin_stop
@@ -245,7 +244,6 @@ if $USE_DOMAIN; then
     USE_HTTPS=true
     echo ""
 
-    # ── Ask whether user already has a certificate ──────────
     thin_top
     thin_line "SSL Certificate Source" "${BOLD}${WHITE}"
     thin_line ""
@@ -260,7 +258,6 @@ if $USE_DOMAIN; then
       info "Please provide the full paths to your existing certificate files."
       echo ""
 
-      # ── Certificate file (.crt / .pem) ───────────────────
       while true; do
         prompt "Full path to certificate file (.crt or .pem):" SSL_CERT_PATH
         SSL_CERT_PATH=$(echo "$SSL_CERT_PATH" | xargs)
@@ -275,7 +272,6 @@ if $USE_DOMAIN; then
         fi
       done
 
-      # ── Private key file (.key / .pem) ───────────────────
       while true; do
         prompt "Full path to private key file (.key or .pem):" SSL_KEY_PATH
         SSL_KEY_PATH=$(echo "$SSL_KEY_PATH" | xargs)
@@ -290,7 +286,6 @@ if $USE_DOMAIN; then
         fi
       done
 
-      # ── Copy certs to a safe location ────────────────────
       SSL_DIR="/etc/ssl/hivoid-hub"
       mkdir -p "$SSL_DIR"
       cp "$SSL_CERT_PATH" "$SSL_DIR/cert.pem"
@@ -390,24 +385,46 @@ ok "User ${BOLD}$DB_USER${NC} provisioned with public schema access"
 # ══════════════════════════════════════════════════════════
 step_header 5 "Python Environment & Application Config"
 
-cd "$INSTALL_DIR/backend"
+BACKEND_DIR="$INSTALL_DIR/backend"
+VENV_DIR="$BACKEND_DIR/venv"
+VENV_PYTHON="$VENV_DIR/bin/python3"
+VENV_PIP="$VENV_DIR/bin/pip"
+VENV_UVICORN="$VENV_DIR/bin/uvicorn"
 
+cd "$BACKEND_DIR"
+
+# ── Create virtual environment ────────────────────────────
 spin_start "Creating virtual environment..."
-python3 -m venv venv > /dev/null 2>&1
-spin_stop; ok "Virtual environment created"
+rm -rf "$VENV_DIR"
+if ! python3 -m venv "$VENV_DIR" > /dev/null 2>&1; then
+  spin_stop
+  err "Failed to create virtual environment. Make sure python3-venv is installed."
+fi
+spin_stop
 
-source venv/bin/activate
+# Verify venv was actually created
+if [[ ! -x "$VENV_PYTHON" ]]; then
+  err "Virtual environment creation failed — $VENV_PYTHON not found."
+fi
+ok "Virtual environment created at ${BOLD}$VENV_DIR${NC}"
+
+# ── Install dependencies ──────────────────────────────────
+spin_start "Upgrading pip..."
+"$VENV_PIP" install --upgrade pip > /dev/null 2>&1
+spin_stop; ok "pip upgraded"
 
 spin_start "Installing Python dependencies..."
-pip install -q --upgrade pip > /dev/null 2>&1
-pip install -q -r requirements.txt > /dev/null 2>&1
+if ! "$VENV_PIP" install -r "$BACKEND_DIR/requirements.txt" > /tmp/pip_install.log 2>&1; then
+  spin_stop
+  err "pip install failed. Check /tmp/pip_install.log for details."
+fi
 spin_stop; ok "Dependencies installed"
 
 JWT_SECRET=$(openssl rand -hex 32)
 HUB_TOKEN=$(openssl rand -hex 24)
 
-# Write .env
-cat > "$INSTALL_DIR/backend/.env" <<EOF
+# ── Write .env ────────────────────────────────────────────
+cat > "$BACKEND_DIR/.env" <<EOF
 PROJECT_NAME="HiVoid Subscription Hub"
 HUB_MASTER_TOKEN=$HUB_TOKEN
 SECRET_KEY=$JWT_SECRET
@@ -416,10 +433,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES=1440
 REDIS_URL=redis://localhost:6379/0
 SQLALCHEMY_DATABASE_URI=postgresql://$DB_USER:$DB_PASS@localhost:5432/$DB_NAME
 EOF
-ok ".env written to ${BOLD}$INSTALL_DIR/backend/.env${NC}"
+ok ".env written to ${BOLD}$BACKEND_DIR/.env${NC}"
 
-# Write config.py
-cat > "$INSTALL_DIR/backend/app/core/config.py" <<EOF
+# ── Write config.py ───────────────────────────────────────
+cat > "$BACKEND_DIR/app/core/config.py" <<'PYEOF'
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -437,38 +454,58 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 settings = Settings()
-EOF
+PYEOF
 ok "config.py updated"
 
+# ── Run migrations ────────────────────────────────────────
 spin_start "Running database migrations..."
-python3 -c "from app.core.database import engine, Base; from app.models.base import User, Node, AdminUser; Base.metadata.create_all(bind=engine)" > /dev/null 2>&1
-spin_stop; ok "Database tables created"
+if ! cd "$BACKEND_DIR" && "$VENV_PYTHON" -c \
+  "from app.core.database import engine, Base; from app.models.base import User, Node, AdminUser; Base.metadata.create_all(bind=engine)" \
+  > /tmp/migration.log 2>&1; then
+  spin_stop
+  warn "Database migration had issues — check /tmp/migration.log"
+else
+  spin_stop; ok "Database tables created"
+fi
 
+# ── Start backend temporarily to create admin ─────────────
 info "Starting backend temporarily to create admin account..."
-"$INSTALL_DIR/backend/venv/bin/uvicorn" app.main:app --host 127.0.0.1 --port "$BACKEND_PORT" &
+cd "$BACKEND_DIR"
+"$VENV_UVICORN" app.main:app --host 127.0.0.1 --port "$BACKEND_PORT" > /tmp/uvicorn_setup.log 2>&1 &
 UVICORN_PID=$!
 
 spin_start "Waiting for backend to become ready..."
-for i in $(seq 1 15); do
-  curl -sf "http://127.0.0.1:$BACKEND_PORT/" > /dev/null 2>&1 && break || sleep 1
+READY=false
+for i in $(seq 1 20); do
+  if curl -sf "http://127.0.0.1:$BACKEND_PORT/" > /dev/null 2>&1; then
+    READY=true
+    break
+  fi
+  sleep 1
 done
-spin_stop; ok "Backend is up"
+spin_stop
 
-curl -sf -X POST "http://127.0.0.1:$BACKEND_PORT/api/v1/auth/setup" \
-  -H "Content-Type: application/json" \
-  -d "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PASS\"}" > /dev/null \
-  && ok "Admin account created: ${BOLD}$ADMIN_USER${NC}" \
-  || warn "Admin setup request failed — run /api/v1/auth/setup manually."
+if $READY; then
+  ok "Backend is up"
+  curl -sf -X POST "http://127.0.0.1:$BACKEND_PORT/api/v1/auth/setup" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PASS\"}" > /dev/null \
+    && ok "Admin account created: ${BOLD}$ADMIN_USER${NC}" \
+    || warn "Admin setup request failed — run /api/v1/auth/setup manually."
+else
+  warn "Backend did not become ready in time — check /tmp/uvicorn_setup.log"
+  warn "Admin account was NOT created. Run /api/v1/auth/setup manually after install."
+fi
 
 kill $UVICORN_PID 2>/dev/null; wait $UVICORN_PID 2>/dev/null || true
-deactivate
 
-# ── Create Management Commands ─────────────────────────────
+# ── Create management commands ────────────────────────────
 info "Creating global management commands..."
-cat > /usr/local/bin/hihub <<EOF
+
+cat > /usr/local/bin/hihub <<SHEOF
 #!/usr/bin/env bash
-sudo $INSTALL_DIR/backend/venv/bin/python3 $INSTALL_DIR/backend/scripts/manager.py "\$@"
-EOF
+exec sudo "$VENV_PYTHON" "$BACKEND_DIR/scripts/manager.py" "\$@"
+SHEOF
 
 chmod +x /usr/local/bin/hihub
 ln -sf /usr/local/bin/hihub /usr/local/bin/hivoid-hub
@@ -488,9 +525,9 @@ After=network.target postgresql.service redis.service
 
 [Service]
 User=root
-WorkingDirectory=$INSTALL_DIR/backend
-ExecStart=$INSTALL_DIR/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port $BACKEND_PORT --workers 2
-EnvironmentFile=$INSTALL_DIR/backend/.env
+WorkingDirectory=$BACKEND_DIR
+ExecStart=$VENV_UVICORN app.main:app --host 127.0.0.1 --port $BACKEND_PORT --workers 2
+EnvironmentFile=$BACKEND_DIR/.env
 Restart=always
 RestartSec=5
 
@@ -511,7 +548,6 @@ step_header 7 "Configuring Nginx Reverse Proxy"
 NGINX_CONF="/etc/nginx/sites-available/hivoid-hub"
 
 if $USE_HTTPS && [[ "$CERT_MODE" == "manual" ]]; then
-  # ── Nginx config with manual SSL certificates ──────────
   cat > "$NGINX_CONF" <<EOF
 server {
     listen 80;
@@ -530,7 +566,7 @@ server {
     ssl_ciphers         HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers on;
 
-    root $INSTALL_DIR/backend/static;
+    root $BACKEND_DIR/static;
     index index.html;
 
     location / {
@@ -552,14 +588,13 @@ server {
 EOF
 
 else
-  # ── Nginx config for HTTP or Let's Encrypt (HTTP first) ─
   cat > "$NGINX_CONF" <<EOF
 server {
     listen 80;
     server_name $HOST;
     client_max_body_size 512m;
 
-    root $INSTALL_DIR/backend/static;
+    root $BACKEND_DIR/static;
     index index.html;
 
     location / {
@@ -588,14 +623,12 @@ spin_start "Testing and reloading Nginx config..."
 nginx -t > /dev/null 2>&1 && systemctl reload nginx > /dev/null 2>&1
 spin_stop; ok "Nginx configured and reloaded"
 
-# ── Let's Encrypt (only when CERT_MODE is letsencrypt) ────
 if $USE_HTTPS && [[ "$CERT_MODE" == "letsencrypt" ]]; then
   info "Requesting Let's Encrypt certificate for ${BOLD}$HOST${NC}..."
   certbot --nginx -d "$HOST" --non-interactive --agree-tos -m "admin@$HOST" --redirect
   ok "HTTPS enabled via Let's Encrypt"
 fi
 
-# ── Manual cert confirmation ───────────────────────────────
 if $USE_HTTPS && [[ "$CERT_MODE" == "manual" ]]; then
   ok "HTTPS enabled with your existing certificate"
 fi
