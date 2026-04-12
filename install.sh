@@ -3,7 +3,6 @@
 # HiVoid Hub — Interactive Installer
 # Usage: bash install.sh [path/to/hivoid-hub-release.zip]
 # =========================================================
-set -e
 export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
 
@@ -368,11 +367,15 @@ DB_NAME="hivoid_hub"
 DB_USER="hivoid"
 
 spin_start "Provisioning database user and schema..."
-sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1 || \
-  sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';"
+USER_EXISTS=$(sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" 2>/dev/null | tr -d '[:space:]')
+if [[ "$USER_EXISTS" != "1" ]]; then
+  sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';" > /dev/null 2>&1
+fi
 sudo -u postgres psql -c "ALTER USER $DB_USER WITH PASSWORD '$DB_PASS';" > /dev/null 2>&1 || true
-sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
-  sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
+DB_EXISTS=$(sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" 2>/dev/null | tr -d '[:space:]')
+if [[ "$DB_EXISTS" != "1" ]]; then
+  sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;" > /dev/null 2>&1
+fi
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;" > /dev/null 2>&1 || true
 sudo -u postgres psql -d "$DB_NAME" -c "GRANT ALL ON SCHEMA public TO $DB_USER;" > /dev/null 2>&1 || true
 spin_stop
@@ -394,15 +397,14 @@ VENV_UVICORN="$VENV_DIR/bin/uvicorn"
 cd "$BACKEND_DIR"
 
 # ── Create virtual environment ────────────────────────────
-spin_start "Creating virtual environment..."
 rm -rf "$VENV_DIR"
-if ! python3 -m venv "$VENV_DIR" > /dev/null 2>&1; then
-  spin_stop
-  err "Failed to create virtual environment. Make sure python3-venv is installed."
-fi
+spin_start "Creating virtual environment..."
+python3 -m venv "$VENV_DIR" > /tmp/venv_create.log 2>&1
+VENV_EXIT=$?
 spin_stop
-
-# Verify venv was actually created
+if [[ $VENV_EXIT -ne 0 ]]; then
+  err "Failed to create virtual environment. Check /tmp/venv_create.log"
+fi
 if [[ ! -x "$VENV_PYTHON" ]]; then
   err "Virtual environment creation failed — $VENV_PYTHON not found."
 fi
@@ -414,11 +416,13 @@ spin_start "Upgrading pip..."
 spin_stop; ok "pip upgraded"
 
 spin_start "Installing Python dependencies..."
-if ! "$VENV_PIP" install -r "$BACKEND_DIR/requirements.txt" > /tmp/pip_install.log 2>&1; then
-  spin_stop
+"$VENV_PIP" install -r "$BACKEND_DIR/requirements.txt" > /tmp/pip_install.log 2>&1
+PIP_EXIT=$?
+spin_stop
+if [[ $PIP_EXIT -ne 0 ]]; then
   err "pip install failed. Check /tmp/pip_install.log for details."
 fi
-spin_stop; ok "Dependencies installed"
+ok "Dependencies installed"
 
 JWT_SECRET=$(openssl rand -hex 32)
 HUB_TOKEN=$(openssl rand -hex 24)
@@ -459,13 +463,16 @@ ok "config.py updated"
 
 # ── Run migrations ────────────────────────────────────────
 spin_start "Running database migrations..."
-if ! cd "$BACKEND_DIR" && "$VENV_PYTHON" -c \
+cd "$BACKEND_DIR"
+"$VENV_PYTHON" -c \
   "from app.core.database import engine, Base; from app.models.base import User, Node, AdminUser; Base.metadata.create_all(bind=engine)" \
-  > /tmp/migration.log 2>&1; then
-  spin_stop
+  > /tmp/migration.log 2>&1
+MIGRATION_EXIT=$?
+spin_stop
+if [[ $MIGRATION_EXIT -ne 0 ]]; then
   warn "Database migration had issues — check /tmp/migration.log"
 else
-  spin_stop; ok "Database tables created"
+  ok "Database tables created"
 fi
 
 # ── Start backend temporarily to create admin ─────────────
