@@ -509,9 +509,26 @@ kill $UVICORN_PID 2>/dev/null; wait $UVICORN_PID 2>/dev/null || true
 # ── Create management commands ────────────────────────────
 info "Creating global management commands..."
 
+# Find manager.py — location may vary between releases
+MANAGER_PY=""
+for candidate in \
+  "$BACKEND_DIR/scripts/manager.py" \
+  "$BACKEND_DIR/manager.py" \
+  "$INSTALL_DIR/manager.py"; do
+  if [[ -f "$candidate" ]]; then
+    MANAGER_PY="$candidate"
+    break
+  fi
+done
+
+if [[ -z "$MANAGER_PY" ]]; then
+  warn "manager.py not found — hihub command will not work until it is placed at $BACKEND_DIR/scripts/manager.py"
+  MANAGER_PY="$BACKEND_DIR/scripts/manager.py"
+fi
+
 cat > /usr/local/bin/hihub <<SHEOF
 #!/usr/bin/env bash
-exec sudo "$VENV_PYTHON" "$BACKEND_DIR/scripts/manager.py" "\$@"
+exec "$VENV_PYTHON" "$MANAGER_PY" "\$@"
 SHEOF
 
 chmod +x /usr/local/bin/hihub

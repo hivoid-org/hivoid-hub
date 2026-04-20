@@ -68,14 +68,30 @@ async def _collect_live_sessions() -> list[dict]:
             except Exception:
                 connected_at_ts = None
 
+        active_state = await redis_client.get(f"node:{node_id}:user:{user_uuid}:active_state") or "OPTIMAL"
+        threat_level_raw = await redis_client.get(f"node:{node_id}:user:{user_uuid}:threat_level")
+        rtt_std_dev_raw = await redis_client.get(f"node:{node_id}:user:{user_uuid}:rtt_std_dev")
+        
+        try:
+            threat_level = int(threat_level_raw) if threat_level_raw else 0
+        except: threat_level = 0
+        
+        try:
+            rtt_std_dev = float(rtt_std_dev_raw) if rtt_std_dev_raw else 0.0
+        except: rtt_std_dev = 0.0
+
         sessions.append(
             {
                 "node_id": node_id,
                 "uuid": user_uuid,
                 "request_pool": request_pool,
                 "connected_at_ts": connected_at_ts,
+                "active_state": active_state.decode() if isinstance(active_state, bytes) else active_state,
+                "threat_level": threat_level,
+                "rtt_std_dev": rtt_std_dev,
             }
         )
+
 
     return sessions
 
@@ -267,14 +283,21 @@ async def _build_subscription_snapshot(db: Session) -> dict:
 async def _build_connection_quality_snapshot(active_users_count: int, sessions: list[dict]) -> dict:
     now_ts = datetime.now(timezone.utc).timestamp()
     durations = []
+    jitters = []
+    threats = []
     for session in sessions:
         connected_at_ts = session.get("connected_at_ts")
-        if connected_at_ts is None:
-            continue
-        duration = max(0, int(now_ts - connected_at_ts))
-        durations.append(duration)
+        if connected_at_ts is not None:
+            duration = max(0, int(now_ts - connected_at_ts))
+            durations.append(duration)
+        
+        # v1.1.0 metrics
+        jitters.append(session.get("rtt_std_dev") or 0.0)
+        threats.append(session.get("threat_level") or 0)
 
     median_duration_sec = int(median(durations)) if durations else 0
+    avg_jitter = sum(jitters) / len(jitters) if jitters else 0.0
+    avg_threat = sum(threats) / len(threats) if threats else 0.0
 
     conn_success = await sum_minute_counter("conn_success", 15)
     conn_retries = await sum_minute_counter("conn_retries", 15)
@@ -300,6 +323,8 @@ async def _build_connection_quality_snapshot(active_users_count: int, sessions: 
         "session_starts_15m": conn_success,
         "sessions_active": sum(session.get("request_pool", 0) for session in sessions),
         "disconnect_reasons": disconnect_reasons,
+        "avg_jitter_ms": round(avg_jitter, 2),
+        "avg_threat_level": round(avg_threat, 1),
     }
 
 

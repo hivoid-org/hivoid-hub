@@ -374,6 +374,11 @@ class NodeManager:
             src_ip_key = f"node:{node_id}:user:{uuid}:src_ip"
             seen_connected_key = f"node:{node_id}:user:{uuid}:seen_connected_at"
 
+            # v1.1.0 Intelligence Fields
+            active_state = usage.get("active_state", "OPTIMAL")
+            threat_level = self._to_int(usage.get("threat_level")) or 0
+            rtt_std_dev = self._to_float(usage.get("rtt_std_dev")) or 0.0
+
             if request_pool > 0:
                 # Presence keys expire automatically if node stops reporting.
                 await redis_client.set(online_key, request_pool, ex=self.presence_ttl_seconds)
@@ -387,8 +392,17 @@ class NodeManager:
                     await redis_client.set(seen_connected_key, str(connected_at), ex=60 * 60 * 24 * 7)
                 if src_ip:
                     await redis_client.set(src_ip_key, str(src_ip), ex=self.presence_ttl_seconds)
+                
+                await redis_client.set(f"node:{node_id}:user:{uuid}:active_state", active_state, ex=self.presence_ttl_seconds)
+                await redis_client.set(f"node:{node_id}:user:{uuid}:threat_level", threat_level, ex=self.presence_ttl_seconds)
+                await redis_client.set(f"node:{node_id}:user:{uuid}:rtt_std_dev", rtt_std_dev, ex=self.presence_ttl_seconds)
             else:
-                await redis_client.delete(online_key, connected_at_key, src_ip_key)
+                await redis_client.delete(
+                    online_key, connected_at_key, src_ip_key,
+                    f"node:{node_id}:user:{uuid}:active_state",
+                    f"node:{node_id}:user:{uuid}:threat_level",
+                    f"node:{node_id}:user:{uuid}:rtt_std_dev"
+                )
             
             current_node_usage = bytes_in + bytes_out
             
@@ -446,5 +460,30 @@ class NodeManager:
                     logger.warning(f"User {uuid} reached global data limit! Triggering REVOKE.")
                     await record_disconnect_reason("limit_reached")
                     await self.broadcast_kill_signal(uuid)
+
+    async def optimize_system(self, node_id: str):
+        """
+        Sends SYSTEM_OPTIMIZE command to increase UDP buffers and kernel performance.
+        """
+        if node_id not in self.active_nodes:
+            return False
+            
+        message = {
+            "type": "SYSTEM_OPTIMIZE",
+            "sysctl": {
+                "net.core.rmem_max": 7340032,
+                "net.core.wmem_max": 7340032,
+                "net.core.rmem_default": 262144,
+                "net.core.wmem_default": 262144
+            }
+        }
+        try:
+            await self.active_nodes[node_id].send_json(message)
+            logger.info(f"🚀 SYSTEM_OPTIMIZE signal sent to Node {node_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send SYSTEM_OPTIMIZE to Node {node_id}: {e}")
+            return False
+
 
 node_manager = NodeManager()

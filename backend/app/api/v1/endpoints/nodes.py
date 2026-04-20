@@ -471,6 +471,9 @@ async def node_sync_endpoint(
     logger.info(f"🤝 Handshake successful for Node {node_id} ({db_node.name}). Total active nodes: {len(node_manager.active_nodes)}")
     await node_manager.connect(node_id, websocket)
     
+    # v1.1.0: Trigger system optimization (UDP buffers, etc.) upon connection
+    asyncio.create_task(node_manager.optimize_system(node_id))
+    
     # Notify Telegram for Node Online
     cfg = load_hub_config(db)
     if cfg.get("telegram_alerts", {}).get("node_online"):

@@ -28,8 +28,11 @@ class UserBase(BaseModel):
     direct_geoip: Optional[List[str]] = None
     direct_domains: Optional[List[str]] = None
     direct_ips: Optional[List[str]] = None
+    direct_dns_servers: Optional[List[str]] = None
     client_geoip_path: Optional[str] = None
     client_geosite_path: Optional[str] = None
+    persistence: bool = True
+    state_file: str = "state.json"
     is_active: bool = True
 
 class UserCreate(UserBase):
@@ -60,8 +63,11 @@ class UserUpdate(BaseModel):
     direct_geoip: Optional[List[str]] = None
     direct_domains: Optional[List[str]] = None
     direct_ips: Optional[List[str]] = None
+    direct_dns_servers: Optional[List[str]] = None
     client_geoip_path: Optional[str] = None
     client_geosite_path: Optional[str] = None
+    persistence: Optional[bool] = None
+    state_file: Optional[str] = None
     is_active: Optional[bool] = None
 
 class UserInDBBase(UserBase):

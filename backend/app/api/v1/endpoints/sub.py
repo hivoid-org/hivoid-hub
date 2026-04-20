@@ -63,7 +63,9 @@ def _get_subscription_data(db_user, db_nodes, hub_config):
         node_configs.append({
             "name": node_name,
             "uuid": db_user.uuid,
-            "remote": f"{host}:{port}",
+            "server": host,
+            "port": port,
+            "servers": [f"{n.public_host or n.ip_address or '0.0.0.0'}:{n.port or 4433}" for n in db_nodes],
             "mode": effective_mode,
             "obfs": effective_obfs,
             "cert_pin": node_cert_pin,
@@ -79,8 +81,11 @@ def _get_subscription_data(db_user, db_nodes, hub_config):
             "direct_geoip": db_user.direct_geoip or hub_config.get("direct_geoip") or [],
             "direct_domains": db_user.direct_domains or hub_config.get("direct_domains") or [],
             "direct_ips": db_user.direct_ips or hub_config.get("direct_ips") or [],
+            "direct_dns_servers": db_user.direct_dns_servers if hasattr(db_user, 'direct_dns_servers') else hub_config.get("direct_dns_servers") or [],
             "geoip_path": db_user.client_geoip_path or hub_config.get("geoip_path") or "",
-            "geosite_path": db_user.client_geosite_path or hub_config.get("geosite_path") or ""
+            "geosite_path": db_user.client_geosite_path or hub_config.get("geosite_path") or "",
+            "persistence": db_user.persistence if db_user.persistence is not None else True,
+            "state_file": db_user.state_file or "state.json"
         })
         
     return nodes_info, hivoid_uris, node_configs

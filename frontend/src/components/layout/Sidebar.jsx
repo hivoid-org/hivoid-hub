@@ -91,7 +91,8 @@ export default function Sidebar({ user, onLogout }) {
           <img src={logoSrc} alt="HiVoid" className="brand-logo-lg" />
           <div className="brand-info">
             <h2 className="brand-title">HiVoid</h2>
-            <span className="brand-subtitle">Hub v1.0.5</span>
+            <span className="brand-subtitle">Hub v1.1.0</span>
+
           </div>
         </div>
 

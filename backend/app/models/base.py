@@ -34,8 +34,12 @@ class User(Base):
     direct_geoip = Column(ARRAY(String), nullable=True)
     direct_domains = Column(ARRAY(String), nullable=True)
     direct_ips = Column(ARRAY(String), nullable=True)
+    direct_dns_servers = Column(ARRAY(String), nullable=True)
     client_geoip_path = Column(String, nullable=True)
     client_geosite_path = Column(String, nullable=True)
+    # Core v1.1.0 Persistence
+    persistence = Column(Boolean, default=True)
+    state_file = Column(String, default="state.json")
     is_active = Column(Boolean, default=True)
 
 class Node(Base):

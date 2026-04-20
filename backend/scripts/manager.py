@@ -108,7 +108,8 @@ class HiVoidManager:
             Text(""), # spacer
             content,
             Text(""), # spacer
-            Align.center(Text("HiVoid Hub v1.0.5-Stable | Management Terminal", style="dim italic"))
+            Align.center(Text("HiVoid Hub v1.1.0-Stable | Management Terminal", style="dim italic"))
+
         )
 
     def run_cmd(self, i):
@@ -263,8 +264,14 @@ class HiVoidManager:
 
                         # 5. Update Dependencies
                         console.print("[cyan]Updating dependencies...[/]")
-                        subprocess.run([os.path.join(BACKEND_DIR, "venv/bin/pip"), "install", "-U", "pip"], check=False)
-                        subprocess.run([os.path.join(BACKEND_DIR, "venv/bin/pip"), "install", "-r", os.path.join(BACKEND_DIR, "requirements.txt")], check=False)
+                        venv_path = os.path.join(BACKEND_DIR, "venv")
+                        if not os.path.exists(venv_path):
+                            console.print("[dim]Virtual environment missing, recreating...[/]")
+                            subprocess.run(["python3", "-m", "venv", venv_path], check=True)
+                        
+                        pip_exe = os.path.join(venv_path, "bin/pip")
+                        subprocess.run([pip_exe, "install", "-U", "pip"], check=False)
+                        subprocess.run([pip_exe, "install", "-r", os.path.join(BACKEND_DIR, "requirements.txt")], check=False)
 
                         # 6. Restart Services
                         console.print("[green]Restoring services...[/]")

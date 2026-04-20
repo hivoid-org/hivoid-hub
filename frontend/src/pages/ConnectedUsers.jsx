@@ -1,11 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, Wifi, RefreshCw, Eye, UserCircle2, Server, Globe2, Clock3, ArrowUpDown, Mail, Fingerprint, Timer, Gauge, Search, SlidersHorizontal } from 'lucide-react';
+import { Activity, Wifi, RefreshCw, Eye, UserCircle2, Server, Globe2, Clock3, ArrowUpDown, Mail, Fingerprint, Timer, Gauge, Search, SlidersHorizontal, Zap, AlertTriangle } from 'lucide-react';
+
 import API from '../services/api';
 import Modal from '../components/common/Modal';
 
 const CONNECTED_USER_COLUMNS = [
   { id: 'identity', label: 'Client Identity', hint: 'Config, email, UUID' },
   { id: 'node', label: 'Node', hint: 'Connected node' },
+  { id: 'state', label: 'State', hint: 'OPTIMAL, THROTTLED, BLOCKED' },
+  { id: 'threat', label: 'Threat', hint: 'Path risk level (0-100)' },
+  { id: 'jitter', label: 'Jitter', hint: 'RTT Std Dev (ms)' },
   { id: 'sourceIp', label: 'Network Source', hint: 'Client source IP' },
   { id: 'connectedFor', label: 'Uptime', hint: 'Elapsed connection time' },
   { id: 'connectedTimer', label: 'Connected For', hint: 'Seconds / minutes / hours' },
@@ -14,7 +18,8 @@ const CONNECTED_USER_COLUMNS = [
   { id: 'connectedAt', label: 'Connected At', hint: 'Connection start timestamp' },
 ];
 
-const DEFAULT_CONNECTED_COLUMNS = ['identity', 'node', 'sourceIp', 'connectedTimer', 'sessionUsage', 'live'];
+const DEFAULT_CONNECTED_COLUMNS = ['identity', 'node', 'state', 'threat', 'jitter', 'sessionUsage', 'live'];
+
 
 const fmtBytes = (bytes) => {
   if (!bytes) return '0 B';
@@ -166,7 +171,29 @@ function ConnectedUserDetailsModal({ isOpen, onClose, item, userInfo, loading })
               </div>
             </div>
             <div className="sub-details-card">
+              <Zap size={16} color="var(--success-color)" />
+              <div>
+                <div className="sub-details-label">Path State</div>
+                <div className="sub-details-value">{item.active_state || 'OPTIMAL'}</div>
+              </div>
+            </div>
+            <div className="sub-details-card">
+              <AlertTriangle size={16} color="var(--warning-color)" />
+              <div>
+                <div className="sub-details-label">Threat Level</div>
+                <div className="sub-details-value">{item.threat_level || 0}%</div>
+              </div>
+            </div>
+            <div className="sub-details-card">
+              <Activity size={16} color="var(--info-color)" />
+              <div>
+                <div className="sub-details-label">Jitter</div>
+                <div className="sub-details-value mono">{Number(item.rtt_std_dev || 0).toFixed(2)}ms</div>
+              </div>
+            </div>
+            <div className="sub-details-card">
               <Clock3 size={16} />
+
               <div>
                 <div className="sub-details-label">Connected At</div>
                 <div className="sub-details-value">{fmtTime(item.connection_time)}</div>
@@ -456,7 +483,44 @@ export default function ConnectedUsers() {
                           </td>
                         );
                       }
+                      if (column.id === 'state') {
+                        const state = item.active_state || 'OPTIMAL';
+                        let badgeClass = 'badge-success';
+                        if (state === 'THROTTLED') badgeClass = 'badge-warning';
+                        else if (state === 'BLOCKED' || state === 'FALLBACK') badgeClass = 'badge-danger';
+                        
+                        return (
+                          <td key={column.id}>
+                            <span className={`badge ${badgeClass} badge-strong`}>{state}</span>
+                          </td>
+                        );
+                      }
+                      if (column.id === 'threat') {
+                        const threat = item.threat_level || 0;
+                        let color = 'var(--success-color)';
+                        if (threat > 70) color = 'var(--danger-color)';
+                        else if (threat > 30) color = 'var(--warning-color)';
+                        
+                        return (
+                          <td key={column.id}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                              <div className="threat-bar-bg" style={{ width: '40px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                                <div className="threat-bar-fill" style={{ width: `${threat}%`, height: '100%', background: color }} />
+                              </div>
+                              <span style={{ fontSize: '11px', fontWeight: 'bold', color }}>{threat}%</span>
+                            </div>
+                          </td>
+                        );
+                      }
+                      if (column.id === 'jitter') {
+                        return (
+                          <td key={column.id}>
+                            <span className="mono" style={{ fontSize: '11px', opacity: 0.8 }}>{Number(item.rtt_std_dev || 0).toFixed(2)}ms</span>
+                          </td>
+                        );
+                      }
                       if (column.id === 'sourceIp') {
+
                         return <td key={column.id}><span className="mono">{item.ip_src || '-'}</span></td>;
                       }
                       if (column.id === 'connectedFor') {
@@ -519,9 +583,22 @@ export default function ConnectedUsers() {
                       <span className="table-card-value">{item.node_name || item.node}</span>
                     </div>
                     <div className="table-card-row">
+                      <span className="table-card-label">Network State</span>
+                      <span className="table-card-value">{item.active_state || 'OPTIMAL'}</span>
+                    </div>
+                    <div className="table-card-row">
+                      <span className="table-card-label">Path Threat</span>
+                      <span className="table-card-value">{item.threat_level || 0}%</span>
+                    </div>
+                    <div className="table-card-row">
+                      <span className="table-card-label">Jitter</span>
+                      <span className="table-card-value">{Number(item.rtt_std_dev || 0).toFixed(2)}ms</span>
+                    </div>
+                    <div className="table-card-row">
                       <span className="table-card-label">Network Source</span>
                       <span className="table-card-value mono">{item.ip_src || '-'}</span>
                     </div>
+
                     <div className="table-card-row">
                       <span className="table-card-label">Uptime</span>
                       <span className="table-card-value">{fmtElapsed(item.connection_time, nowMs)}</span>

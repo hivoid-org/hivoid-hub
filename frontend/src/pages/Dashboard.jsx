@@ -17,6 +17,7 @@ import {
   Zap,
   HardDrive,
   Cpu,
+  Shield,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -439,6 +440,8 @@ export default function Dashboard() {
           <div className="dashboard-desktop-cards">
             <StatCard icon={Server} label="Total Nodes" value={global.connected_nodes} subtitle="Active nodes" />
             <StatCard icon={Users} label="Total Users" value={global.total_users} subtitle={`${global.online_users} online`} />
+            <StatCard icon={Activity} label="Avg Jitter" value={`${quality.avg_jitter_ms} ms`} subtitle="Network stability" />
+            <StatCard icon={Shield} label="Threat Level" value={`${quality.avg_threat_level}`} subtitle="Path risk score" />
             <StatCard icon={Cpu} label="Avg CPU Usage" value={nodes.length > 0 ? `${avgCpu}%` : 'N/A'} subtitle="Across all nodes" />
             <StatCard icon={HardDrive} label="Avg RAM Usage" value={nodes.length > 0 ? `${avgRam} MB` : 'N/A'} subtitle="Memory utilization" />
             <StatCard icon={ArrowUp} label="Total Upload" value={fmtBytes(global.global_upload)} subtitle="Network traffic" />

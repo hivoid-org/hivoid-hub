@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.0.5--stable-blue.svg" />
+  <img src="https://img.shields.io/badge/version-v1.1.0--stable-blue.svg" />
   <img src="https://img.shields.io/badge/license-MPL--2.0-green.svg" />
   <img src="https://img.shields.io/badge/platform-linux-blue.svg" />
   <img src="https://img.shields.io/badge/python-3.10+-00ADD8?logo=python" />
@@ -14,6 +14,12 @@
 </p>
 
 Professional Node Management & Subscription Billing Interface.
+
+## ✨ Features (v1.1.0)
+- **Intelligence Dashboard**: Real-time visualization of global Jitter (RTT StdDev) and Threat Levels across all nodes.
+- **Multi-Server Sync**: Automatic propagation of server lists for seamless client-side failover.
+- **v1.2.0 Ecosystem Sync**: Fully compatible with HiVoid-Core v1.2.0 configuration persistence and granular routing.
+- **Enhanced Subscriptions**: Optimized JSON and Base64 subscription payloads for third-party client compatibility.
 
 ## 🚀 One-Line Installation
 Run the following curl command as root to automatically download and install the latest release:
