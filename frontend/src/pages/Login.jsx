@@ -328,7 +328,7 @@ export default function Login({ onLoginSuccess }) {
           </form>
         </div>
 
-        <p className="login-footer">HiVoid Hub v1.0.5</p>
+        <p className="login-footer">HiVoid Hub v2.0.1</p>
       </div>
     </div>
   );

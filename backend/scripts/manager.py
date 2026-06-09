@@ -108,7 +108,7 @@ class HiVoidManager:
             Text(""), # spacer
             content,
             Text(""), # spacer
-            Align.center(Text("HiVoid Hub v1.1.0-Stable | Management Terminal", style="dim italic"))
+            Align.center(Text("HiVoid Hub v2.0.1-Stable | Management Terminal", style="dim italic"))
 
         )
 

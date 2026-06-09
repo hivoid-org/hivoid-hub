@@ -207,6 +207,7 @@ async def list_nodes(db: Session = Depends(get_db)):
             "last_install_type": db_node.last_install_type or "",
             "last_install_message": db_node.last_install_message or "",
             "last_install_request_id": db_node.last_install_request_id or "",
+            "voidreach_config": db_node.voidreach_config,
         })
         
     return {"nodes": nodes_data}
@@ -236,7 +237,11 @@ async def update_node(node_id: str, node_update: NodeUpdate, db: Session = Depen
         await node_manager.send_config_update(node_id, config)
     
     await log_security_event(db, current_admin.id, "NODE_UPDATED", f"Node {node_id} configuration updated", "n/a", "n/a")
-    return db_node
+    return {
+        "status": "updated",
+        "node_id": db_node.node_id,
+        "voidreach_config": db_node.voidreach_config,
+    }
 
 
 @router.delete("/{node_id}", dependencies=[Depends(get_current_admin)])

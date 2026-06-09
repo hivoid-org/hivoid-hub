@@ -66,13 +66,31 @@ export default function Nodes() {
 
         if (prev.length === nextNodes.length) {
           // Deep comparison of meaningful fields to avoid re-renders if nothing changed
-          const prevHash = JSON.stringify(prev.map(n => ({ 
+          const prevHash = JSON.stringify(prev.map(n => ({
             id: n.id, s: n.status, u: n.usersCount, cpu: n.cpu_usage, ram: n.ram_usage,
-            name: n.name, ip: n.ip, listen: n.listen_addr
+            name: n.name, ip: n.ip, listen: n.listen_addr,
+            serverMode: n.server_mode, logLevel: n.log_level,
+            certFile: n.cert_file, keyFile: n.key_file, certPin: n.cert_pin,
+            hotReload: n.hot_reload, connectionTracking: n.connection_tracking,
+            disconnectExpired: n.disconnect_expired, maxConns: n.max_conns,
+            antiProbe: n.anti_probe, fallbackAddr: n.fallback_addr,
+            geoipPath: n.geoip_path, geositePath: n.geosite_path,
+            allowedHosts: n.allowed_hosts, blockedHosts: n.blocked_hosts,
+            blockedTags: n.blocked_tags, port: n.port, publicHost: n.public_host,
+            voidreachConfig: n.voidreach_config
           })));
-          const nextHash = JSON.stringify(nextNodes.map(n => ({ 
+          const nextHash = JSON.stringify(nextNodes.map(n => ({
             id: n.id, s: n.status, u: n.usersCount, cpu: n.cpu_usage, ram: n.ram_usage,
-            name: n.name, ip: n.ip, listen: n.listen_addr
+            name: n.name, ip: n.ip, listen: n.listen_addr,
+            serverMode: n.server_mode, logLevel: n.log_level,
+            certFile: n.cert_file, keyFile: n.key_file, certPin: n.cert_pin,
+            hotReload: n.hot_reload, connectionTracking: n.connection_tracking,
+            disconnectExpired: n.disconnect_expired, maxConns: n.max_conns,
+            antiProbe: n.anti_probe, fallbackAddr: n.fallback_addr,
+            geoipPath: n.geoip_path, geositePath: n.geosite_path,
+            allowedHosts: n.allowed_hosts, blockedHosts: n.blocked_hosts,
+            blockedTags: n.blocked_tags, port: n.port, publicHost: n.public_host,
+            voidreachConfig: n.voidreach_config
           })));
           
           if (prevHash === nextHash) return prev;
