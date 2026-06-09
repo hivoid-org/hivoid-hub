@@ -24,6 +24,36 @@ from app.models.base import Node as DBNode
 from app.schemas.node import NodeUpdate
 
 
+def _build_voidreach_config(db_node: DBNode) -> dict:
+    default_vr = {
+        "enabled": False,
+        "mode": "cdn",
+        "listen_addr": "0.0.0.0:8080",
+        "fronting_domain": "",
+        "real_host": "",
+        "relay_addr": "",
+        "preshared_key": "",
+        "decoy_file": "",
+        "tls": {
+            "cert_file": "/etc/hivoid/cert.pem",
+            "key_file": "/etc/hivoid/key.pem",
+            "insecure_skip_verify": False
+        },
+        "cdn_domain": "",
+        "cdn_agent": "",
+        "path": "/ws-path"
+    }
+    if db_node.voidreach_config:
+        config = dict(default_vr)
+        for k, v in db_node.voidreach_config.items():
+            if k == "tls" and isinstance(v, dict):
+                config["tls"] = {**default_vr["tls"], **v}
+            else:
+                config[k] = v
+        return config
+    return default_vr
+
+
 def _build_node_config(db_node: DBNode) -> dict:
     """Build the server.json config dict from a DB node record."""
     return {
@@ -49,7 +79,10 @@ def _build_node_config(db_node: DBNode) -> dict:
         "allowed_hosts": db_node.allowed_hosts or [],
         "blocked_hosts": db_node.blocked_hosts or [],
         "blocked_tags": db_node.blocked_tags or [],
+        "users": [],
+        "voidreach": _build_voidreach_config(db_node),
     }
+
 
 
 def _build_tls_install_payload(mode: str, domain: str, email: str, cloudflare_token: str = "") -> dict:

@@ -79,6 +79,8 @@ class Node(Base):
     last_install_type = Column(String, default="")
     last_install_message = Column(String, default="")
     last_install_request_id = Column(String, default="")
+    voidreach_config = Column(JSON, nullable=True)
+
 
 class AdminUser(Base):
     __tablename__ = "admin_users"

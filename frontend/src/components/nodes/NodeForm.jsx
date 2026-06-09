@@ -39,8 +39,23 @@ const initialForm = {
   blocked_hosts: '',
   blocked_tags: '',
   port: 4433,
-  public_host: ''
+  public_host: '',
+  voidreach_enabled: false,
+  voidreach_mode: 'cdn',
+  voidreach_listen_addr: '0.0.0.0:8080',
+  voidreach_fronting_domain: '',
+  voidreach_real_host: '',
+  voidreach_relay_addr: '',
+  voidreach_preshared_key: '',
+  voidreach_decoy_file: '',
+  voidreach_tls_cert_file: '',
+  voidreach_tls_key_file: '',
+  voidreach_tls_insecure_skip_verify: false,
+  voidreach_cdn_domain: '',
+  voidreach_cdn_agent: '',
+  voidreach_path: '/ws-path',
 };
+
 
 export default function NodeForm({ isOpen, onClose, onSave, editingNode, loading }) {
   const [form, setForm] = useState(initialForm);
@@ -54,6 +69,8 @@ export default function NodeForm({ isOpen, onClose, onSave, editingNode, loading
 
   useEffect(() => {
     if (editingNode) {
+      const vr = editingNode.voidreach_config || {};
+      const vrTls = vr.tls || {};
       setForm({
         name: editingNode.name || '',
         listen_addr: editingNode.listen_addr || ':4433',
@@ -74,7 +91,21 @@ export default function NodeForm({ isOpen, onClose, onSave, editingNode, loading
         blocked_hosts: (editingNode.blocked_hosts || []).join(', '),
         blocked_tags: (editingNode.blocked_tags || []).join(', '),
         port: editingNode.port || 4433,
-        public_host: editingNode.public_host || ''
+        public_host: editingNode.public_host || '',
+        voidreach_enabled: !!vr.enabled,
+        voidreach_mode: vr.mode || 'cdn',
+        voidreach_listen_addr: vr.listen_addr || '0.0.0.0:8080',
+        voidreach_fronting_domain: vr.fronting_domain || '',
+        voidreach_real_host: vr.real_host || '',
+        voidreach_relay_addr: vr.relay_addr || '',
+        voidreach_preshared_key: vr.preshared_key || '',
+        voidreach_decoy_file: vr.decoy_file || '',
+        voidreach_tls_cert_file: vrTls.cert_file || '',
+        voidreach_tls_key_file: vrTls.key_file || '',
+        voidreach_tls_insecure_skip_verify: !!vrTls.insecure_skip_verify,
+        voidreach_cdn_domain: vr.cdn_domain || '',
+        voidreach_cdn_agent: vr.cdn_agent || '',
+        voidreach_path: vr.path || '/ws-path',
       });
       setTlsMode(editingNode.tls_mode || 'openssl_self_signed');
       setTlsDomain(editingNode.tls_domain || editingNode.public_host || '');
@@ -110,7 +141,25 @@ export default function NodeForm({ isOpen, onClose, onSave, editingNode, loading
       blocked_hosts: form.blocked_hosts ? form.blocked_hosts.split(',').map(s => s.trim()).filter(Boolean) : [],
       blocked_tags: form.blocked_tags ? form.blocked_tags.split(',').map(s => s.trim()).filter(Boolean) : [],
       port: form.port,
-      public_host: form.public_host
+      public_host: form.public_host,
+      voidreach_config: {
+        enabled: form.voidreach_enabled,
+        mode: form.voidreach_mode,
+        listen_addr: form.voidreach_listen_addr,
+        fronting_domain: form.voidreach_fronting_domain,
+        real_host: form.voidreach_real_host,
+        relay_addr: form.voidreach_relay_addr,
+        preshared_key: form.voidreach_preshared_key,
+        decoy_file: form.voidreach_decoy_file,
+        tls: {
+          cert_file: form.voidreach_tls_cert_file,
+          key_file: form.voidreach_tls_key_file,
+          insecure_skip_verify: form.voidreach_tls_insecure_skip_verify,
+        },
+        cdn_domain: form.voidreach_cdn_domain,
+        cdn_agent: form.voidreach_cdn_agent,
+        path: form.voidreach_path,
+      }
     };
     onSave(payload, editingNode?.id);
   };
@@ -119,8 +168,10 @@ export default function NodeForm({ isOpen, onClose, onSave, editingNode, loading
     { id: 'general', label: 'General', icon: Server },
     { id: 'security', label: 'Security', icon: Lock },
     { id: 'features', label: 'Features', icon: Zap },
-    { id: 'routing', label: 'Routing', icon: Globe }
+    { id: 'routing', label: 'Routing', icon: Globe },
+    { id: 'voidreach', label: 'VoidReach', icon: RefreshCw },
   ];
+
 
   const handleInstallTls = async () => {
     if (!editingNode?.id) return;
@@ -487,7 +538,160 @@ export default function NodeForm({ isOpen, onClose, onSave, editingNode, loading
             </FormSection>
           </div>
         )}
+        {/* VoidReach Tab */}
+        {activeTab === 'voidreach' && (
+
+          <div className="animate-fade-slide">
+            <FormSection title="VOIDREACH OBFUSCATION ENGINE" icon={RefreshCw}>
+              <Toggle
+                label="Enable VoidReach"
+                icon={Zap}
+                checked={form.voidreach_enabled}
+                onChange={v => setForm({ ...form, voidreach_enabled: v })}
+              />
+              {form.voidreach_enabled && (
+                <>
+                  <div className="grid-cols-3" style={{ marginTop: '15px' }}>
+                    <FormField label="VoidReach Mode">
+                      <select
+                        className="input-field"
+                        value={form.voidreach_mode}
+                        onChange={e => setForm({ ...form, voidreach_mode: e.target.value })}
+                      >
+                        <option value="cdn">cdn (Cloudflare etc.)</option>
+                        <option value="direct">direct</option>
+                        <option value="fronting">fronting</option>
+                        <option value="relay">relay</option>
+                      </select>
+                    </FormField>
+                    <FormField label="Listen Address">
+                      <input
+                        type="text"
+                        className="input-field"
+                        value={form.voidreach_listen_addr}
+                        onChange={e => setForm({ ...form, voidreach_listen_addr: e.target.value })}
+                      />
+                    </FormField>
+                    <FormField label="Preshared Key (Secret)">
+                      <input
+                        type="text"
+                        className="input-field mono"
+                        placeholder="Secret Key"
+                        value={form.voidreach_preshared_key}
+                        onChange={e => setForm({ ...form, voidreach_preshared_key: e.target.value })}
+                      />
+                    </FormField>
+                  </div>
+
+                  <div className="grid-cols-2" style={{ marginTop: '12px' }}>
+                    <FormField label="Fronting Domain">
+                      <input
+                        type="text"
+                        className="input-field"
+                        placeholder="fronting.domain.com"
+                        value={form.voidreach_fronting_domain}
+                        onChange={e => setForm({ ...form, voidreach_fronting_domain: e.target.value })}
+                      />
+                    </FormField>
+                    <FormField label="Real Host">
+                      <input
+                        type="text"
+                        className="input-field"
+                        placeholder="realhost.com"
+                        value={form.voidreach_real_host}
+                        onChange={e => setForm({ ...form, voidreach_real_host: e.target.value })}
+                      />
+                    </FormField>
+                  </div>
+
+                  <div className="grid-cols-3" style={{ marginTop: '12px' }}>
+                    <FormField label="Relay Address">
+                      <input
+                        type="text"
+                        className="input-field"
+                        placeholder="1.2.3.4:443"
+                        value={form.voidreach_relay_addr}
+                        onChange={e => setForm({ ...form, voidreach_relay_addr: e.target.value })}
+                      />
+                    </FormField>
+                    <FormField label="CDN Domain">
+                      <input
+                        type="text"
+                        className="input-field"
+                        placeholder="your-cdn-domain.cf"
+                        value={form.voidreach_cdn_domain}
+                        onChange={e => setForm({ ...form, voidreach_cdn_domain: e.target.value })}
+                      />
+                    </FormField>
+                    <FormField label="CDN User Agent">
+                      <input
+                        type="text"
+                        className="input-field"
+                        placeholder="Agent header"
+                        value={form.voidreach_cdn_agent}
+                        onChange={e => setForm({ ...form, voidreach_cdn_agent: e.target.value })}
+                      />
+                    </FormField>
+                  </div>
+
+                  <div className="grid-cols-2" style={{ marginTop: '12px' }}>
+                    <FormField label="WS Path">
+                      <input
+                        type="text"
+                        className="input-field"
+                        placeholder="/ws-path"
+                        value={form.voidreach_path}
+                        onChange={e => setForm({ ...form, voidreach_path: e.target.value })}
+                      />
+                    </FormField>
+                    <FormField label="Decoy File Path">
+                      <input
+                        type="text"
+                        className="input-field"
+                        placeholder="/var/www/decoy.html"
+                        value={form.voidreach_decoy_file}
+                        onChange={e => setForm({ ...form, voidreach_decoy_file: e.target.value })}
+                      />
+                    </FormField>
+                  </div>
+
+                  <FormSection title="VOIDREACH TLS OVERRIDES" icon={Lock} style={{ marginTop: '15px' }}>
+                    <div className="grid-cols-2">
+                      <FormField label="TLS Cert File Path">
+                        <input
+                          type="text"
+                          className="input-field"
+                          placeholder="/etc/hivoid/cert.pem"
+                          value={form.voidreach_tls_cert_file}
+                          onChange={e => setForm({ ...form, voidreach_tls_cert_file: e.target.value })}
+                        />
+                      </FormField>
+                      <FormField label="TLS Key File Path">
+                        <input
+                          type="text"
+                          className="input-field"
+                          placeholder="/etc/hivoid/key.pem"
+                          value={form.voidreach_tls_key_file}
+                          onChange={e => setForm({ ...form, voidreach_tls_key_file: e.target.value })}
+                        />
+                      </FormField>
+                    </div>
+                    <div style={{ marginTop: '10px' }}>
+                      <Toggle
+                        label="Insecure Skip Verify"
+                        icon={Shield}
+                        checked={form.voidreach_tls_insecure_skip_verify}
+                        onChange={v => setForm({ ...form, voidreach_tls_insecure_skip_verify: v })}
+                      />
+                    </div>
+                  </FormSection>
+                </>
+              )}
+            </FormSection>
+          </div>
+        )}
       </form>
     </Modal>
+
   );
 }

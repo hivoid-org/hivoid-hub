@@ -465,9 +465,10 @@ ok "config.py updated"
 spin_start "Running database migrations..."
 cd "$BACKEND_DIR"
 "$VENV_PYTHON" -c \
-  "from app.core.database import engine, Base; from app.models.base import User, Node, AdminUser; Base.metadata.create_all(bind=engine)" \
+  "import app.main" \
   > /tmp/migration.log 2>&1
 MIGRATION_EXIT=$?
+
 spin_stop
 if [[ $MIGRATION_EXIT -ne 0 ]]; then
   warn "Database migration had issues — check /tmp/migration.log"

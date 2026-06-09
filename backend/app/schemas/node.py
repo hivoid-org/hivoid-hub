@@ -40,6 +40,8 @@ class NodeUpdate(BaseModel):
     last_install_type: Optional[str] = None
     last_install_message: Optional[str] = None
     last_install_request_id: Optional[str] = None
+    voidreach_config: Optional[dict] = None
+
 
 class NodeInDBBase(NodeBase):
     id: int
@@ -66,6 +68,8 @@ class NodeInDBBase(NodeBase):
     last_install_type: str = ""
     last_install_message: str = ""
     last_install_request_id: str = ""
+    voidreach_config: Optional[dict] = None
+
     
     model_config = ConfigDict(from_attributes=True)
 

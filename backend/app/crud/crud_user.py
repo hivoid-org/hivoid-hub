@@ -40,18 +40,24 @@ def build_user_sync_payload(user: User) -> dict:
         "uuid": user.uuid,
         "email": user.email or user.username,
         "enabled": user.is_active,
+        "is_active": user.is_active,
         "max_connections": user.max_connections,
         "max_ips": user.max_ips,
         "bandwidth_limit": user.bandwidth_limit,
         "data_limit": user.data_limit,
         "blocked_tags": user.blocked_tags or [],
         "blocked_hosts": user.blocked_hosts or [],
+        "bytes_in": 0,
+        "bytes_out": 0,
     }
     # Optional fields — only include if set
     if user.expire_at:
         payload["expire_at"] = user.expire_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+        payload["expire_at_unix"] = int(user.expire_at.timestamp())
     else:
         payload["expire_at"] = ""
+        payload["expire_at_unix"] = 0
+
     if user.bind_ip:
         payload["bind_ip"] = user.bind_ip
     if user.mode:

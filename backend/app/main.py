@@ -9,6 +9,22 @@ from app.core.database import engine, Base
 # Create tables matching models (including new columns)
 Base.metadata.create_all(bind=engine)
 
+# Dynamic Column Migration for voidreach_config
+from sqlalchemy import text
+with engine.begin() as conn:
+    try:
+        # First try PostgreSQL JSONB type with IF NOT EXISTS
+        conn.execute(text("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS voidreach_config JSONB;"))
+    except Exception:
+        try:
+            # Fallback to standard JSON type for SQLite or MySQL
+            conn.execute(text("ALTER TABLE nodes ADD COLUMN voidreach_config JSON;"))
+        except Exception:
+            # Column already exists or another DB error
+            pass
+
+
+
 # Enhanced Logging Configuration
 log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s')
 
@@ -30,7 +46,8 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     description="Centralized Subscription & Node Management Hub for HiVoid.",
-    version="1.1.0",
+    version="2.0.0",
+
 )
 
 # Request Logging Middleware
@@ -81,6 +98,7 @@ async def startup_event():
 def read_root():
     return {
         "status": "online",
-        "message": "Welcome to HiVoid Subscription Hub API v1.1.0",
+        "message": "Welcome to HiVoid Subscription Hub API v2.0.0",
+
         "websocket_endpoint": f"wss://<your-domain>{settings.API_V1_STR}/nodes/ws"
     }
